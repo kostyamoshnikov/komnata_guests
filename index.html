@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#050505">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="БуФест · Вход">
 <title>БуФест 2026 · Вход · Комната света</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -205,6 +209,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
     <div class="stat"><div class="n" id="st-seats">—</div><div class="l">Мест пришло</div></div>
     <div class="stat"><div class="n" id="st-records">—</div><div class="l">Записей отмечено</div></div>
   </div>
+  <div id="updated-at" style="text-align:right;font-size:10px;color:var(--steel);letter-spacing:.06em;margin:-10px 0 14px"></div>
 
   <div class="view-toggle">
     <button id="vt-list" class="active" onclick="setView('list')">Список</button>
@@ -313,6 +318,11 @@ const SHOWS = [
 const ZONES = ['лесенка','входной','амфитеатр','Сектор A','Сектор B','Сектор C','Сектор D','-','приставные стулья левая сторона','приставные стулья правая сторона'];
 const REFERRERS = ['Светлана Кряжева','Константин Мошников','Ксения Журавлёва','Ольга Виноградова','Эвелина Гроник','Александр Кряжев','Дмитрий Фунтов','Егор Ковалёв','Александр Цереня','Илья Зайцев','Ван Шень','Николай Рысев','Вера Енгалычева','Иван Орлов','Евгения Леонова','Мария Денисова','Ксения Галибина','Даниил Ядченко','Семён Шестаков','Александр Трачевский','Никита Ремизов','Фёдор Бычков','Площадка Скороход'];
 
+// Вставьте сюда адрес вашего веб-приложения Apps Script (заканчивается на /exec) —
+// один раз, перед публикацией сайта. Тогда персоналу вообще не придётся
+// ничего настраивать на телефоне — страница заработает сразу при открытии.
+const DEFAULT_API_URL = '';
+
 let API_URL = null;
 let currentShow = SHOWS[0].tab;
 let currentGuests = [];
@@ -335,11 +345,12 @@ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState=
 
 async function init(){
   const stored = await safeGet('apps-script-url');
-  if(!stored){
+  const url = stored || DEFAULT_API_URL;
+  if(!url){
     document.getElementById('setup-screen').style.display='block';
     return;
   }
-  API_URL = stored;
+  API_URL = url;
   currentShow = pickTodayShow();
   document.getElementById('app').style.display='block';
   buildTabs();
@@ -347,19 +358,23 @@ async function init(){
   buildReferrers();
   loadShow();
   requestWakeLock();
+  document.addEventListener('click', function onFirstTap(){
+    requestWakeLock();
+    document.removeEventListener('click', onFirstTap);
+  }, {once:true});
   setInterval(()=>{
     const overlayOpen = document.querySelector('.overlay.show');
     const searching = document.activeElement && document.activeElement.id==='search';
-    if(!overlayOpen && !searching) loadShow({silent:true});
+    if(!overlayOpen && !searching) loadShow();
   }, 30000);
 }
 
 async function safeGet(key){
-  try{ const r = await window.storage.get(key, true); return r ? r.value : null; }
+  try{ return localStorage.getItem(key); }
   catch(e){ return null; }
 }
 async function safeSet(key, value){
-  try{ await window.storage.set(key, value, true); return true; }
+  try{ localStorage.setItem(key, value); return true; }
   catch(e){ return false; }
 }
 
@@ -393,7 +408,15 @@ function buildTabs(){
     const b = document.createElement('button');
     b.className = 'tab' + (s.tab===currentShow ? ' active':'');
     b.innerHTML = `<span class="d">${s.d}</span><span class="t">${s.title}</span>`;
-    b.onclick = ()=>{ currentShow = s.tab; buildTabs(); loadShow(); };
+    b.onclick = ()=>{
+      currentShow = s.tab;
+      currentGuests = [];
+      currentSold = [];
+      lastUpdatedAt = null;
+      updateLastUpdatedLabel();
+      buildTabs();
+      loadShow();
+    };
     wrap.appendChild(b);
   });
 }
@@ -406,11 +429,30 @@ function buildReferrers(){
   dl.innerHTML = REFERRERS.map(r=>`<option value="${r}">`).join('');
 }
 
-async function loadShow(){
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=>{ t.classList.remove('show'); }, 3200);
+}
+
+let lastUpdatedAt = null;
+
+function formatTime(d){
+  return d ? d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'}) : '';
+}
+function updateLastUpdatedLabel(){
+  document.getElementById('updated-at').textContent = lastUpdatedAt ? 'Обновлено ' + formatTime(lastUpdatedAt) : '';
+}
+
+async function loadShow(opts){
+  opts = opts || {};
   const listArea = document.getElementById('list-area');
   const refreshBtn = document.getElementById('refresh-btn');
+  const hadData = currentGuests.length > 0;
   refreshBtn.classList.add('spin');
-  listArea.innerHTML = '<div class="loading">Загрузка…</div>';
+  if(!hadData) listArea.innerHTML = '<div class="loading">Загрузка…</div>';
   try{
     const url = API_URL + '?action=list&show=' + encodeURIComponent(currentShow) + '&_=' + Date.now();
     const res = await fetch(url);
@@ -418,11 +460,17 @@ async function loadShow(){
     if(data.error){ throw new Error(data.error); }
     currentGuests = data.guests || [];
     currentSold = data.sold || [];
+    lastUpdatedAt = new Date();
     updateStats(data.counts);
     renderList();
     buildSchema();
+    updateLastUpdatedLabel();
   }catch(err){
-    listArea.innerHTML = '<div class="err">Не удалось загрузить список. Проверьте адрес в настройках (⚙) и подключение к интернету.</div>';
+    if(hadData){
+      showToast('Не удалось обновить — показаны данные ' + formatTime(lastUpdatedAt));
+    }else{
+      listArea.innerHTML = '<div class="err">Не удалось загрузить список. Проверьте адрес в настройках (⚙) и подключение к интернету.</div>';
+    }
   }finally{
     refreshBtn.classList.remove('spin');
   }
@@ -434,17 +482,38 @@ function updateStats(counts){
   document.getElementById('st-records').textContent = counts.arrivedRecords + ' / ' + counts.totalRecords;
 }
 
+function onSearchInput(){
+  const wrap = document.getElementById('search-wrap');
+  const v = document.getElementById('search').value;
+  wrap.classList.toggle('has-text', v.length>0);
+  renderList();
+}
+function clearSearch(){
+  document.getElementById('search').value='';
+  document.getElementById('search-wrap').classList.remove('has-text');
+  renderList();
+  document.getElementById('search').focus();
+}
+function toggleHideArrived(){
+  hideArrived = !hideArrived;
+  document.getElementById('hide-toggle').classList.toggle('active', hideArrived);
+  renderList();
+}
+
 function renderList(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   const listArea = document.getElementById('list-area');
-  const filtered = q ? currentGuests.filter(g=>g.name.toLowerCase().includes(q)) : currentGuests;
+  let filtered = q ? currentGuests.filter(g=>g.name.toLowerCase().includes(q)) : currentGuests.slice();
+  if(hideArrived) filtered = filtered.filter(g=>!g.arrived);
+  // непришедшие — наверху, чтобы не листать мимо уже отмеченных
+  filtered = filtered.slice().sort((a,b)=> (a.arrived?1:0) - (b.arrived?1:0));
 
   if(currentGuests.length===0){
     listArea.innerHTML = '<div class="empty">На этот показ пока никто не записан.</div>';
     return;
   }
   if(filtered.length===0){
-    listArea.innerHTML = '<div class="empty">Никого не найдено по «'+escapeHtml(q)+'».</div>';
+    listArea.innerHTML = '<div class="empty">'+(hideArrived ? 'Все отмечены как пришедшие.' : 'Никого не найдено по «'+escapeHtml(q)+'».')+'</div>';
     return;
   }
 
@@ -468,12 +537,17 @@ async function toggleArrived(row, value){
   const g = currentGuests.find(x=>x.row===row);
   if(g){ g.arrived = value; renderList(); updateStats(computeCounts()); buildSchema(); }
   try{
-    await fetch(API_URL, {
+    const res = await fetch(API_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({action:'checkin', show: currentShow, row, value})
     });
-  }catch(e){ /* поставится при следующем обновлении */ }
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+  }catch(e){
+    if(g){ g.arrived = !value; renderList(); updateStats(computeCounts()); buildSchema(); }
+    showToast('Не сохранилось — проверьте связь и отметьте ещё раз');
+  }
 }
 
 function computeCounts(){
@@ -492,6 +566,7 @@ function openAdd(){
   document.getElementById('f-zone').value='-';
   document.getElementById('f-seatinfo').value='';
   document.getElementById('f-note').value='';
+  document.getElementById('f-arrived').checked = true;
   document.getElementById('add-msg').textContent='';
   document.getElementById('add-overlay').classList.add('show');
 }
@@ -507,7 +582,8 @@ async function submitAdd(){
     from: document.getElementById('f-from').value.trim(),
     zone: document.getElementById('f-zone').value,
     seatInfo: document.getElementById('f-seatinfo').value.trim(),
-    note: document.getElementById('f-note').value.trim()
+    note: document.getElementById('f-note').value.trim(),
+    arrived: document.getElementById('f-arrived').checked
   };
   document.getElementById('add-msg').textContent = 'Добавляю…';
   try{
@@ -617,7 +693,7 @@ function amphiBlockHtml(colStart, colEnd){
 }
 
 function looseZoneChips(zone, label){
-  var list = guestsInZone(zone);
+  var list = guestsInZone(zone).slice().sort(function(a,b){ return (a.arrived?1:0)-(b.arrived?1:0); });
   if(list.length===0) return '';
   var chips = list.map(function(g){
     return `<div class="loose-chip ${g.arrived?'arrived':''}" onclick="openPopoverFor(${g.row})">
