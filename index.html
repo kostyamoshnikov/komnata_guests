@@ -153,6 +153,8 @@ main{max-width:720px;margin:0 auto;padding:18px}
 .stage-strip{background:var(--panel);border:1px solid rgba(217,217,217,.15);text-align:center;padding:10px;font-size:10px;letter-spacing:.3em;color:var(--steel);text-transform:uppercase;margin:0 auto 14px;max-width:220px}
 .sectors-row{display:flex;justify-content:space-between;gap:10px;margin-bottom:18px}
 .sector-col{display:flex;flex-direction:column;gap:6px;align-items:center}
+.sector-cols{display:flex;gap:6px}
+.seat-col{display:flex;flex-direction:column-reverse;gap:4px}
 .sector-label{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--steel)}
 .seat-row{display:flex;gap:4px}
 .seat{
@@ -873,7 +875,7 @@ function parseSeatInfo(text){
   return {row: row, seats: seats};
 }
 
-var SECTOR_ROWS = 3, SECTOR_COLS = 6;
+var SECTOR_ROWS = 3, SECTOR_SEATS = 3;
 var AMPHI_ROWS = 10;
 
 // зоны, у которых нет фиксированного места — показываются списком, а не сеткой
@@ -923,16 +925,16 @@ function seatCellHtml(zone, row, seat){
 }
 
 function sectorHtml(zone, label, mirrored){
-  var rowsHtml = '';
-  for(var r=1; r<=SECTOR_ROWS; r++){
-    var cells = '';
-    for(var c=1;c<=SECTOR_COLS;c++){
-      var seat = mirrored ? (SECTOR_COLS - c + 1) : c;
-      cells += seatCellHtml(zone, r, seat);
-    }
-    rowsHtml += `<div class="seat-row">${cells}</div>`;
+  var colsHtml = '';
+  for(var i=1; i<=SECTOR_ROWS; i++){
+    // Сектор A/Б: колонки слева направо — ряд 3,2,1 (ряд 3 ближе к сцене).
+    // Сектор C/D: колонки слева направо — ряд 1,2,3 (зеркально).
+    var rowNum = mirrored ? (SECTOR_ROWS - i + 1) : i;
+    var seatsHtml = '';
+    for(var s=1; s<=SECTOR_SEATS; s++){ seatsHtml += seatCellHtml(zone, rowNum, s); }
+    colsHtml += `<div class="seat-col">${seatsHtml}</div>`;
   }
-  return `<div class="sector-col"><div class="sector-label">${label}</div>${rowsHtml}</div>`;
+  return `<div class="sector-col"><div class="sector-label">${label}</div><div class="sector-cols">${colsHtml}</div></div>`;
 }
 
 function amphiBlockHtml(colStart, colEnd){
