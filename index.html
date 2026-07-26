@@ -159,9 +159,12 @@ main{max-width:720px;margin:0 auto;padding:18px}
 .amphi-label{text-align:center;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--steel);margin-bottom:8px}
 .amphi-wrap{display:flex;justify-content:center;align-items:flex-start;gap:14px}
 .amphi-block{display:flex;flex-direction:column;gap:4px}
-.lesenka-col{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 2px}
+.lesenka-col{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 2px;cursor:pointer;border-radius:3px;transition:background .15s}
+.lesenka-col:hover{background:rgba(255,255,255,.08)}
 .lesenka-col span{writing-mode:vertical-rl;font-size:8px;letter-spacing:.2em;color:var(--steel);text-transform:uppercase;white-space:nowrap}
-.extra-strip{display:flex;flex-direction:column;gap:4px}
+.extra-col{display:flex;flex-direction:column;justify-content:center;align-items:center;align-self:flex-start;height:60px;padding:0 3px;cursor:pointer;border:1px dashed rgba(140,140,140,.45);border-radius:3px;transition:border-color .15s,background .15s}
+.extra-col:hover{border-color:var(--light);background:rgba(255,255,255,.08)}
+.extra-col span{writing-mode:vertical-rl;font-size:7.5px;letter-spacing:.14em;color:var(--steel);text-transform:uppercase;white-space:nowrap}
 .legend{display:flex;gap:16px;flex-wrap:wrap;margin:18px 0;font-size:10px;color:var(--steel);letter-spacing:.04em}
 .legend .lg{display:flex;align-items:center;gap:6px}
 .legend .dot{width:12px;height:12px;border-radius:3px;border:1px solid rgba(140,140,140,.45)}
@@ -289,6 +292,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
     <div class="form-msg" id="add-msg"></div>
     <div class="sheet-actions">
       <button class="btn-ghost" onclick="closeAdd()">Отмена</button>
+      <button class="btn-ghost" id="delete-btn" onclick="deleteFromModal()" style="display:none;color:var(--warn);border-color:var(--warn)">Удалить</button>
       <button class="btn" id="add-submit-btn" onclick="submitAdd()">Добавить в список</button>
     </div>
   </div>
@@ -302,6 +306,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
   <div class="pv-actions">
     <button class="btn-ghost" onclick="closePopover()">Закрыть</button>
     <button class="btn-ghost" onclick="editFromPopover()">Изменить</button>
+    <button class="btn-ghost" id="pv-delete" onclick="deleteFromPopover()" style="color:var(--warn);border-color:var(--warn)">Удалить</button>
     <button class="btn" id="pv-toggle" onclick="popoverToggle()"></button>
   </div>
 </div>
@@ -587,6 +592,7 @@ function openAdd(prefill){
   editingRow = null;
   document.getElementById('add-title').textContent = 'Новый гость';
   document.getElementById('add-submit-btn').textContent = 'Добавить в список';
+  document.getElementById('delete-btn').style.display = 'none';
   document.getElementById('f-arrived-label').textContent = 'Гость уже у входа — сразу отметить «пришёл»';
   document.getElementById('f-name').value='';
   document.getElementById('f-seats').value=1;
@@ -607,6 +613,7 @@ function openEdit(row){
   editingRow = row;
   document.getElementById('add-title').textContent = 'Изменить гостя';
   document.getElementById('add-submit-btn').textContent = 'Сохранить изменения';
+  document.getElementById('delete-btn').style.display = 'block';
   document.getElementById('f-arrived-label').textContent = 'Гость пришёл';
   document.getElementById('f-name').value = g.name;
   document.getElementById('f-seats').value = g.seats;
@@ -663,6 +670,53 @@ async function submitAdd(){
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// Общая функция удаления — вызывается и из формы редактирования, и из
+// попапа на схеме зала. Спрашивает подтверждение (действие необратимо —
+// строка очищается на сервере сразу), убирает гостя из локального списка
+// без ожидания ответа сервера (чтобы список не «подвисал»), откатывает
+// назад при ошибке сети.
+async function performDelete(row){
+  const g = currentGuests.find(x=>x.row===row);
+  if(!g) return;
+  if(!confirm('Удалить «' + g.name + '» из списка? Это освободит место — отменить нельзя, придётся вносить заново.')) return;
+
+  currentGuests = currentGuests.filter(x=>x.row!==row);
+  renderList();
+  updateStats(computeCounts());
+  buildSchema();
+
+  try{
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'delete', show: currentShow, row})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    showToast('Гость удалён');
+  }catch(e){
+    currentGuests.push(g);
+    renderList();
+    updateStats(computeCounts());
+    buildSchema();
+    showToast('Не удалось удалить — проверьте связь и попробуйте снова');
+  }
+}
+
+function deleteFromModal(){
+  if(editingRow==null) return;
+  const row = editingRow;
+  closeAdd();
+  performDelete(row);
+}
+
+function deleteFromPopover(){
+  if(popoverRow==null) return;
+  const row = popoverRow;
+  closePopover();
+  performDelete(row);
 }
 
 /* ───────── схема зала ───────── */
@@ -775,9 +829,11 @@ function buildSchema(){
     </div>
     <div class="amphi-label">Амфитеатр</div>
     <div class="amphi-wrap">
+      <div class="extra-col" onclick="openAdd({zone:'приставные стулья левая сторона'})" title="Приставные стулья, левая сторона · нажмите, чтобы вписать гостя"><span>Приставные 1–3 ряд</span></div>
       ${amphiBlockHtml(1,6)}
-      <div class="lesenka-col"><span>Лесенка</span></div>
+      <div class="lesenka-col" onclick="openAdd({zone:'лесенка'})" title="Лесенка · нажмите, чтобы вписать гостя"><span>Лесенка</span></div>
       ${amphiBlockHtml(7,12)}
+      <div class="extra-col" onclick="openAdd({zone:'приставные стулья правая сторона'})" title="Приставные стулья, правая сторона · нажмите, чтобы вписать гостя"><span>Приставные 1–3 ряд</span></div>
     </div>
   </div></div>
   <div class="legend">
