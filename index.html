@@ -466,11 +466,12 @@ async function loadShow(opts){
     buildSchema();
     updateLastUpdatedLabel();
   }catch(err){
+    var detail = escapeHtml(err && err.message ? err.message : String(err));
     if(hadData){
       showToast('Не удалось обновить — показаны данные ' + formatTime(lastUpdatedAt));
     }else{
-      listArea.innerHTML = '<div class="err">Не удалось загрузить список. Проверьте адрес в настройках (⚙) и подключение к интернету.</div>';
-      document.getElementById('schema-area').innerHTML = '<div class="err">Не удалось загрузить данные. Проверьте адрес в настройках (⚙) и подключение к интернету.</div>';
+      listArea.innerHTML = '<div class="err">Не удалось загрузить список. Проверьте адрес в настройках (⚙) и подключение к интернету.<br><small style="opacity:.7">Техническая причина: ' + detail + '</small></div>';
+      document.getElementById('schema-area').innerHTML = '<div class="err">Не удалось загрузить данные. Проверьте адрес в настройках (⚙) и подключение к интернету.<br><small style="opacity:.7">Техническая причина: ' + detail + '</small></div>';
     }
   }finally{
     refreshBtn.classList.remove('spin');
@@ -598,7 +599,8 @@ async function submitAdd(){
     closeAdd();
     loadShow();
   }catch(e){
-    document.getElementById('add-msg').textContent = 'Не удалось сохранить. Проверьте связь и попробуйте снова.';
+    var detail = e && e.message ? e.message : String(e);
+    document.getElementById('add-msg').textContent = 'Не удалось сохранить. Проверьте связь и попробуйте снова. Техническая причина: ' + detail;
   }
 }
 
