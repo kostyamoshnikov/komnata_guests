@@ -161,7 +161,7 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
 .schema{overflow-x:auto;padding-bottom:6px}
 .schema-inner{min-width:340px}
 .stage-strip{background:var(--panel);border:1px solid rgba(217,217,217,.15);text-align:center;padding:10px;font-size:10px;letter-spacing:.3em;color:var(--steel);text-transform:uppercase;margin:0 0 14px;max-width:220px}
-.sectors-row{display:flex;justify-content:flex-start;align-items:flex-start;gap:28px;margin-bottom:18px;flex-wrap:nowrap}
+.sectors-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:18px}
 .sector-col{display:flex;flex-direction:column;gap:6px;align-items:center}
 .sector-cols{display:flex;gap:6px}
 .seat-col{display:flex;flex-direction:column-reverse;gap:4px}
@@ -185,14 +185,14 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
   .sectors-row{gap:14px}
   .stage-strip{padding:6px;font-size:8px;letter-spacing:.15em;max-width:100px;margin-bottom:10px}
   .amphi-wrap{gap:4px}
-  .amphi-side{width:38px}
+  .amphi-side{width:52px}
   .lesenka-col{width:26px;padding:4px 2px;font-size:7px}
   .amphi-block{gap:3px}
   .entrance-btn, .entrance-label, .extra-col{font-size:7.5px;padding:5px 3px}
 }
 .amphi-label{text-align:center;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--steel);margin-bottom:8px}
-.amphi-wrap{display:flex;justify-content:flex-start;align-items:stretch;gap:14px}
-.amphi-side{display:flex;flex-direction:column;justify-content:space-between;align-items:center;width:64px}
+.amphi-wrap{display:flex;justify-content:space-between;align-items:stretch;gap:14px}
+.amphi-side{display:flex;flex-direction:column;justify-content:space-between;align-items:center;width:84px}
 .entrance-label{
   font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);
   background:var(--panel);border:1px solid rgba(217,217,217,.15);border-radius:3px;padding:8px 6px;text-align:center;
@@ -990,13 +990,13 @@ function buildSchema(){
   <div class="schema"><div class="schema-inner">
     <div class="sectors-row">
       <div style="display:flex;flex-direction:column;gap:14px">${sectorHtml('Сектор A','Сектор A', true)}${sectorHtml('Сектор B','Сектор B', true)}</div>
-      <div class="stage-strip" style="align-self:flex-start">Сцена</div>
+      <div class="stage-strip" style="align-self:center">Сцена</div>
       <div style="display:flex;flex-direction:column;gap:14px">${sectorHtml('Сектор C','Сектор C', false)}${sectorHtml('Сектор D','Сектор D', false)}</div>
     </div>
     <div class="amphi-label">Амфитеатр</div>
     <div class="amphi-wrap">
       <div class="amphi-side">
-        <div class="extra-col" onclick="openAdd({zone:'приставные стулья левая сторона'})" title="Приставные стулья, левая сторона · нажмите, чтобы вписать гостя"><span>Приставные, левая сторона</span></div>
+        <div class="extra-col" onclick="openAdd({zone:'приставные стулья левая сторона'})" title="Приставные стулья, левая сторона · нажмите, чтобы вписать гостя"><span>Приставные<br>левая сторона</span></div>
         <div class="entrance-btn" onclick="openAdd({zone:'входной'})" title="Входной, без рассадки · нажмите, чтобы вписать гостя">Входной</div>
         <div class="entrance-label" title="Вход / выход">Вход / выход</div>
       </div>
@@ -1004,7 +1004,7 @@ function buildSchema(){
       <div class="lesenka-col" onclick="openAdd({zone:'лесенка'})" title="Лесенка · нажмите, чтобы вписать гостя"><span>Лесенка</span></div>
       ${amphiBlockHtml(7,12)}
       <div class="amphi-side">
-        <div class="extra-col" onclick="openAdd({zone:'приставные стулья правая сторона'})" title="Приставные стулья, правая сторона · нажмите, чтобы вписать гостя"><span>Приставные, правая сторона</span></div>
+        <div class="extra-col" onclick="openAdd({zone:'приставные стулья правая сторона'})" title="Приставные стулья, правая сторона · нажмите, чтобы вписать гостя"><span>Приставные<br>правая сторона</span></div>
         <div class="entrance-btn" onclick="openAdd({zone:'входной'})" title="Входной, без рассадки · нажмите, чтобы вписать гостя">Входной</div>
         <div class="entrance-label" title="Вход / выход">Вход / выход</div>
       </div>
