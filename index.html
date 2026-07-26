@@ -470,6 +470,7 @@ async function loadShow(opts){
       showToast('Не удалось обновить — показаны данные ' + formatTime(lastUpdatedAt));
     }else{
       listArea.innerHTML = '<div class="err">Не удалось загрузить список. Проверьте адрес в настройках (⚙) и подключение к интернету.</div>';
+      document.getElementById('schema-area').innerHTML = '<div class="err">Не удалось загрузить данные. Проверьте адрес в настройках (⚙) и подключение к интернету.</div>';
     }
   }finally{
     refreshBtn.classList.remove('spin');
