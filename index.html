@@ -44,8 +44,16 @@ header{position:sticky;top:0;z-index:40;background:linear-gradient(to bottom, rg
 .gear:hover{border-color:var(--light);color:var(--light)}
 
 /* show tabs */
-.tabs{display:flex;gap:8px;overflow-x:auto;padding:0 18px 14px;max-width:720px;margin:0 auto;scrollbar-width:none}
+.tabs-wrap{position:relative;max-width:720px;margin:0 auto;padding:0 18px 14px}
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;scroll-behavior:smooth;padding:0 26px}
 .tabs::-webkit-scrollbar{display:none}
+.tabs-arrow{
+  position:absolute;top:0;bottom:14px;width:30px;z-index:5;
+  border:none;cursor:pointer;font-size:18px;color:var(--light);
+  display:flex;align-items:center;justify-content:center;
+}
+.tabs-arrow.left{left:0;background:linear-gradient(to right, var(--void) 40%, transparent)}
+.tabs-arrow.right{right:0;background:linear-gradient(to left, var(--void) 40%, transparent)}
 .tab{flex:0 0 auto;border:1px solid rgba(140,140,140,.35);background:transparent;color:var(--steel);padding:9px 14px;font-size:11px;letter-spacing:.08em;white-space:nowrap;cursor:pointer;transition:all .2s;text-align:left}
 .tab .d{font-family:'Playfair Display',serif;font-weight:600;color:var(--light);font-size:13px;display:block}
 .tab .t{display:block;margin-top:2px;text-transform:uppercase;letter-spacing:.1em}
@@ -95,7 +103,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
 }
 .g-check.on{border-color:var(--ok);background:var(--ok);color:var(--void);transform:scale(1.04)}
 .g-check:active{transform:scale(.9)}
-.g-body{flex:1;min-width:0}
+.g-body{flex:1;min-width:0;cursor:pointer}
 .g-name{color:var(--light);font-size:15px;letter-spacing:.01em}
 .guest.arrived .g-name{text-decoration:line-through;text-decoration-color:rgba(217,217,217,.4)}
 .g-meta{margin-top:3px;font-size:11.5px;color:var(--steel);letter-spacing:.02em}
@@ -175,7 +183,8 @@ main{max-width:720px;margin:0 auto;padding:18px}
 .popover.show{display:block}
 .popover .pv-name{color:var(--light);font-size:15px;margin-bottom:4px}
 .popover .pv-meta{color:var(--steel);font-size:11.5px;margin-bottom:12px}
-.popover .pv-actions{display:flex;gap:10px}
+.popover .pv-actions{display:flex;gap:10px;flex-wrap:wrap}
+.popover .pv-actions .btn, .popover .pv-actions .btn-ghost{flex:1 1 auto}
 
 /* settings screen */
 .setup{max-width:420px;margin:80px auto;padding:0 20px;text-align:center}
@@ -202,7 +211,11 @@ main{max-width:720px;margin:0 auto;padding:18px}
     <div class="wordmark">КОМНАТА СВЕТА<small>БуФест 2026 · Вход</small></div>
     <button class="gear" onclick="openSettings()">⚙</button>
   </div>
-  <div class="tabs" id="tabs"></div>
+  <div class="tabs-wrap">
+    <button class="tabs-arrow left" onclick="scrollTabs(-1)" aria-label="Показы левее">‹</button>
+    <div class="tabs" id="tabs"></div>
+    <button class="tabs-arrow right" onclick="scrollTabs(1)" aria-label="Показы правее">›</button>
+  </div>
 </header>
 
 <main>
@@ -239,7 +252,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
 
 <div class="overlay" id="add-overlay">
   <div class="sheet">
-    <h2>Новый гость</h2>
+    <h2 id="add-title">Новый гость</h2>
     <div class="field">
       <label>Фамилия Имя</label>
       <input id="f-name" type="text" placeholder="Иванова Мария">
@@ -271,12 +284,12 @@ main{max-width:720px;margin:0 auto;padding:18px}
     </div>
     <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--mist);margin-bottom:6px;cursor:pointer">
       <input type="checkbox" id="f-arrived" checked style="width:auto">
-      Гость уже у входа — сразу отметить «пришёл»
+      <span id="f-arrived-label">Гость уже у входа — сразу отметить «пришёл»</span>
     </label>
     <div class="form-msg" id="add-msg"></div>
     <div class="sheet-actions">
       <button class="btn-ghost" onclick="closeAdd()">Отмена</button>
-      <button class="btn" onclick="submitAdd()">Добавить в список</button>
+      <button class="btn" id="add-submit-btn" onclick="submitAdd()">Добавить в список</button>
     </div>
   </div>
 </div>
@@ -288,6 +301,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
   <div class="pv-meta" id="pv-meta"></div>
   <div class="pv-actions">
     <button class="btn-ghost" onclick="closePopover()">Закрыть</button>
+    <button class="btn-ghost" onclick="editFromPopover()">Изменить</button>
     <button class="btn" id="pv-toggle" onclick="popoverToggle()"></button>
   </div>
 </div>
@@ -400,6 +414,10 @@ function saveSettingsUrl(){
     return;
   }
   safeSet('apps-script-url', v).then(()=>{ API_URL = v; closeSettings(); loadShow(); });
+}
+
+function scrollTabs(dir){
+  document.getElementById('tabs').scrollBy({left: dir*180, behavior:'smooth'});
 }
 
 function buildTabs(){
@@ -527,7 +545,7 @@ function renderList(){
     return `
     <div class="guest ${g.arrived?'arrived':''}" data-row="${g.row}">
       <button class="g-check ${g.arrived?'on':''}" onclick="toggleArrived(${g.row}, ${!g.arrived})">✓</button>
-      <div class="g-body">
+      <div class="g-body" onclick="openEdit(${g.row})">
         <div class="g-name">${escapeHtml(g.name)}</div>
         <div class="g-meta">${escapeHtml(metaParts.join(' · ') || '—')}${g.note ? ' · <b>'+escapeHtml(g.note)+'</b>':''}</div>
       </div>
@@ -562,8 +580,14 @@ function computeCounts(){
   return {totalSeats, arrivedSeats, totalRecords, arrivedRecords};
 }
 
+var editingRow = null;
+
 function openAdd(prefill){
   prefill = prefill || {};
+  editingRow = null;
+  document.getElementById('add-title').textContent = 'Новый гость';
+  document.getElementById('add-submit-btn').textContent = 'Добавить в список';
+  document.getElementById('f-arrived-label').textContent = 'Гость уже у входа — сразу отметить «пришёл»';
   document.getElementById('f-name').value='';
   document.getElementById('f-seats').value=1;
   document.getElementById('f-from').value='';
@@ -575,13 +599,42 @@ function openAdd(prefill){
   document.getElementById('add-overlay').classList.add('show');
   if(prefill.zone) document.getElementById('f-name').focus();
 }
-function closeAdd(){ document.getElementById('add-overlay').classList.remove('show'); }
+
+// Открыть ту же форму, но в режиме правки существующей записи (по номеру строки)
+function openEdit(row){
+  const g = currentGuests.find(x=>x.row===row);
+  if(!g) return;
+  editingRow = row;
+  document.getElementById('add-title').textContent = 'Изменить гостя';
+  document.getElementById('add-submit-btn').textContent = 'Сохранить изменения';
+  document.getElementById('f-arrived-label').textContent = 'Гость пришёл';
+  document.getElementById('f-name').value = g.name;
+  document.getElementById('f-seats').value = g.seats;
+  document.getElementById('f-from').value = g.from || '';
+  document.getElementById('f-zone').value = g.zone || '-';
+  document.getElementById('f-seatinfo').value = g.seatInfo || '';
+  document.getElementById('f-note').value = g.note || '';
+  document.getElementById('f-arrived').checked = !!g.arrived;
+  document.getElementById('add-msg').textContent='';
+  document.getElementById('add-overlay').classList.add('show');
+}
+
+function editFromPopover(){
+  if(popoverRow==null) return;
+  const row = popoverRow;
+  closePopover();
+  openEdit(row);
+}
+
+function closeAdd(){ document.getElementById('add-overlay').classList.remove('show'); editingRow = null; }
 
 async function submitAdd(){
   const name = document.getElementById('f-name').value.trim();
   if(!name){ document.getElementById('add-msg').textContent = 'Впишите фамилию и имя.'; return; }
+  const isEdit = editingRow != null;
   const payload = {
-    action:'add', show: currentShow,
+    action: isEdit ? 'edit' : 'add',
+    show: currentShow,
     name,
     seats: Number(document.getElementById('f-seats').value)||1,
     from: document.getElementById('f-from').value.trim(),
@@ -590,7 +643,8 @@ async function submitAdd(){
     note: document.getElementById('f-note').value.trim(),
     arrived: document.getElementById('f-arrived').checked
   };
-  document.getElementById('add-msg').textContent = 'Добавляю…';
+  if(isEdit) payload.row = editingRow;
+  document.getElementById('add-msg').textContent = isEdit ? 'Сохраняю…' : 'Добавляю…';
   try{
     const res = await fetch(API_URL, {
       method:'POST',
