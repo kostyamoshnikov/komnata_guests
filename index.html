@@ -142,11 +142,12 @@ main{max-width:720px;margin:0 auto;padding:18px}
 .seat-row{display:flex;gap:4px}
 .seat{
   width:16px;height:16px;border-radius:3px;border:1px solid rgba(140,140,140,.45);
-  background:transparent;cursor:default;flex:0 0 auto;
+  background:transparent;cursor:pointer;flex:0 0 auto;transition:border-color .15s,background .15s;
 }
+.seat:not(.filled):not(.sold):hover{border-color:var(--light);background:rgba(255,255,255,.1)}
 .seat.filled{border-color:transparent;background:var(--steel);cursor:pointer}
 .seat.arrived{background:var(--ok);cursor:pointer}
-.seat.sold{border-color:transparent;background:var(--warn);cursor:default}
+.seat.sold{border-color:transparent;background:var(--warn);cursor:pointer}
 .amphi-label{text-align:center;font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--steel);margin-bottom:8px}
 .amphi-wrap{display:flex;justify-content:center;align-items:flex-start;gap:14px}
 .amphi-block{display:flex;flex-direction:column;gap:4px}
@@ -561,16 +562,18 @@ function computeCounts(){
   return {totalSeats, arrivedSeats, totalRecords, arrivedRecords};
 }
 
-function openAdd(){
+function openAdd(prefill){
+  prefill = prefill || {};
   document.getElementById('f-name').value='';
   document.getElementById('f-seats').value=1;
   document.getElementById('f-from').value='';
-  document.getElementById('f-zone').value='-';
-  document.getElementById('f-seatinfo').value='';
+  document.getElementById('f-zone').value = prefill.zone || '-';
+  document.getElementById('f-seatinfo').value = prefill.seatInfo || '';
   document.getElementById('f-note').value='';
   document.getElementById('f-arrived').checked = true;
   document.getElementById('add-msg').textContent='';
   document.getElementById('add-overlay').classList.add('show');
+  if(prefill.zone) document.getElementById('f-name').focus();
 }
 function closeAdd(){ document.getElementById('add-overlay').classList.remove('show'); }
 
@@ -670,9 +673,9 @@ function seatCellHtml(zone, row, seat){
   var sold = findSoldEntry(zone, row, seat);
   if(sold){
     var title = 'Продано по билету' + (sold.comment ? ' · ' + sold.comment : '');
-    return `<div class="seat sold" title="${escapeHtml(title)}"></div>`;
+    return `<div class="seat sold" data-zone="${escapeHtml(zone)}" data-row="${row}" data-seat="${seat}" data-sold="1" onclick="seatTap(this)" title="${escapeHtml(title)}"></div>`;
   }
-  return '<div class="seat"></div>';
+  return `<div class="seat" data-zone="${escapeHtml(zone)}" data-row="${row}" data-seat="${seat}" onclick="seatTap(this)" title="Свободно · нажмите, чтобы вписать гостя"></div>`;
 }
 
 function sectorHtml(zone, label){
@@ -739,8 +742,17 @@ function seatTap(el){
   var row = parseInt(el.getAttribute('data-row'),10);
   var zone = el.getAttribute('data-zone');
   var seat = parseInt(el.getAttribute('data-seat'),10);
+
   var g = findSeatGuest(zone, row, seat);
-  if(g) openPopoverFor(g.row);
+  if(g){ openPopoverFor(g.row); return; }
+
+  if(el.getAttribute('data-sold')){
+    var sold = findSoldEntry(zone, row, seat);
+    showToast('Это место продано по билету' + (sold && sold.comment ? ' · ' + sold.comment : '') + ' — гостя сюда не сажаем');
+    return;
+  }
+
+  openAdd({ zone: zone, seatInfo: row + ' ряд ' + seat + ' место' });
 }
 
 var popoverRow = null;
