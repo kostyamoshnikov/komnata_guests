@@ -85,8 +85,10 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
 .hide-toggle{background:var(--ink);border:1px solid rgba(217,217,217,.15);color:var(--steel);width:44px;font-size:14px;cursor:pointer}
 .hide-toggle.active{color:var(--light);border-color:var(--light)}
 
-.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-140%);z-index:60;background:var(--warn);color:var(--void);padding:11px 18px;font-size:12.5px;letter-spacing:.02em;box-shadow:0 6px 20px rgba(0,0,0,.4);transition:transform .3s;max-width:90vw;text-align:center}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-140%);z-index:60;background:var(--warn);color:var(--void);padding:11px 12px 11px 18px;font-size:12.5px;letter-spacing:.02em;box-shadow:0 6px 20px rgba(0,0,0,.4);transition:transform .3s;max-width:90vw;text-align:center;display:flex;align-items:center;gap:10px}
 .toast.show{transform:translateX(-50%) translateY(0)}
+.toast-action{background:rgba(0,0,0,.15);color:var(--void);border:1px solid rgba(0,0,0,.3);border-radius:3px;padding:6px 10px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.toast-action:hover{background:rgba(0,0,0,.25)}
 
 /* guest list */
 .empty,.loading,.err{padding:40px 10px;text-align:center;color:var(--steel);font-size:13px}
@@ -149,6 +151,7 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
 .field-row .field{flex:1}
 .sheet-actions{display:flex;gap:10px;margin-top:18px}
 .btn{flex:1;background:var(--light);color:var(--void);border:none;padding:14px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.btn.btn-warn-confirm{background:var(--warn);color:var(--void)}
 .btn-ghost{flex:0 0 auto;background:transparent;color:var(--steel);border:1px solid rgba(140,140,140,.4);padding:14px 18px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
 .form-msg{font-size:12px;color:var(--warn);margin-top:8px;min-height:16px}
 
@@ -161,7 +164,7 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
 .schema{overflow-x:auto;padding-bottom:6px}
 .schema-inner{min-width:340px}
 .stage-strip{background:var(--panel);border:1px solid rgba(217,217,217,.15);text-align:center;padding:10px;font-size:10px;letter-spacing:.3em;color:var(--steel);text-transform:uppercase;margin:0 0 14px;max-width:220px}
-.sectors-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:18px}
+.sectors-row{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
 .sector-col{display:flex;flex-direction:column;gap:6px;align-items:center}
 .sector-cols{display:flex;gap:6px}
 .seat-col{display:flex;flex-direction:column-reverse;gap:4px}
@@ -274,6 +277,7 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
     <div class="stat"><div class="n" id="st-records">—</div><div class="l">Записей отмечено</div></div>
   </div>
   <div id="updated-at" style="text-align:right;font-size:10px;color:var(--steel);letter-spacing:.06em;margin:-10px 0 14px"></div>
+  <div id="queue-badge" style="display:none;align-items:center;justify-content:center;gap:6px;background:var(--warn);color:var(--void);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;border-radius:3px;margin:-4px 0 14px;text-align:center"></div>
 
   <div class="view-toggle">
     <button id="vt-list" class="active" onclick="setView('list')">Список</button>
@@ -306,12 +310,21 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
 <div class="overlay" id="add-overlay">
   <div class="sheet">
     <h2 id="add-title">Новый гость</h2>
-    <div class="field">
+    <div class="view-toggle" id="add-mode-toggle" style="margin-bottom:14px">
+      <button id="am-single" class="active" onclick="setAddMode(false)">Один гость</button>
+      <button id="am-group" onclick="setAddMode(true)">Несколько гостей</button>
+    </div>
+    <div class="field" id="name-single-wrap">
       <label>Фамилия Имя</label>
-      <input id="f-name" type="text" placeholder="Иванова Мария">
+      <input id="f-name" type="text" placeholder="Иванова Мария" oninput="onConflictFieldsChange()">
+    </div>
+    <div class="field" id="name-group-wrap" style="display:none">
+      <label>Имена — по одному на строку</label>
+      <textarea id="f-names-group" rows="4" placeholder="Иванова Мария&#10;Петров Сергей&#10;Сидорова Анна" style="width:100%;background:var(--void);border:1px solid rgba(217,217,217,.18);color:var(--light);padding:11px 12px;font-size:14px;font-family:inherit;resize:vertical"></textarea>
+      <div style="font-size:11px;color:var(--steel);margin-top:6px">Зона, «от кого», примечание и явка — одни на всех. Место ниже можно оставить пустым или указать диапазоном (см. подсказку под полем).</div>
     </div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" id="seats-field-wrap">
         <label>Мест</label>
         <input id="f-seats" type="number" min="1" value="1">
       </div>
@@ -324,13 +337,15 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
     <div class="field-row">
       <div class="field">
         <label>Зона</label>
-        <select id="f-zone"></select>
+        <select id="f-zone" onchange="onConflictFieldsChange()"></select>
       </div>
       <div class="field">
         <label>Ряд / место</label>
-        <input id="f-seatinfo" placeholder="напр. 3 ряд 5 место">
+        <input id="f-seatinfo" placeholder="напр. 3 ряд 5 место" oninput="onConflictFieldsChange()">
       </div>
     </div>
+    <div style="font-size:11px;color:var(--steel);margin:-8px 0 12px;display:none" id="group-seat-hint">Для группы можно указать диапазон: «2 ряд 3-5 место» — места 3,4,5 достанутся именам по порядку сверху вниз. Число мест должно совпадать с числом имён, либо оставьте поле пустым.</div>
+    <div class="form-msg" id="seat-conflict-msg" style="display:none"></div>
     <div class="field">
       <label>Примечание</label>
       <input id="f-note" placeholder="необязательно">
@@ -348,7 +363,7 @@ main{max-width:720px;margin:0 auto;padding:18px 18px calc(18px + 84px + env(safe
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"><span id="toast-msg"></span><button id="toast-action" class="toast-action" style="display:none"></button></div>
 
 <div class="overlay" id="sold-overlay">
   <div class="sheet">
@@ -457,10 +472,12 @@ async function init(){
   API_URL = url;
   currentShow = pickTodayShow();
   document.getElementById('app').style.display='block';
+  updateQueueBadge(getQueue().length);
   buildTabs();
   buildZones();
   buildReferrers();
   loadShow();
+  flushQueue();
   requestWakeLock();
   document.addEventListener('click', function onFirstTap(){
     requestWakeLock();
@@ -470,6 +487,7 @@ async function init(){
     const overlayOpen = document.querySelector('.overlay.show');
     const searching = document.activeElement && document.activeElement.id==='search';
     if(!overlayOpen && !searching) loadShow();
+    flushQueue();
   }, 30000);
 }
 
@@ -480,6 +498,114 @@ async function safeGet(key){
 async function safeSet(key, value){
   try{ localStorage.setItem(key, value); return true; }
   catch(e){ return false; }
+}
+
+/* ───────── офлайн-очередь: действия, не дошедшие из-за плохой связи,
+   сохраняются и автоматически повторяются при следующей удачной
+   отправке / восстановлении сети, а не теряются молча ───────── */
+const QUEUE_KEY = 'pending-actions-queue';
+const QUEUE_MAX = 50; // защита от бесконечного роста, если офлайн надолго
+
+function getQueue(){
+  try{
+    const raw = localStorage.getItem(QUEUE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+function saveQueue(arr){
+  try{ localStorage.setItem(QUEUE_KEY, JSON.stringify(arr)); }catch(e){ /* недоступно — не критично */ }
+  updateQueueBadge(arr.length);
+}
+function queueAction(payload){
+  const arr = getQueue();
+  const entry = { id: Date.now() + '-' + Math.random().toString(36).slice(2), payload, ts: Date.now() };
+  arr.push(entry);
+  while(arr.length > QUEUE_MAX) arr.shift();
+  saveQueue(arr);
+  return entry.id;
+}
+// Убирает конкретную ещё не отправленную запись из очереди — нужно для
+// «Отменить» на действиях, которые сами не успели уйти на сервер (нет
+// связи): не отправляем то, что уже отменили локально.
+function unqueueAction(id){
+  const arr = getQueue().filter(x => x.id !== id);
+  saveQueue(arr);
+}
+function updateQueueBadge(n){
+  const el = document.getElementById('queue-badge');
+  if(!el) return;
+  if(n > 0){ el.textContent = 'Не отправлено: ' + n; el.style.display = 'inline-flex'; }
+  else{ el.style.display = 'none'; }
+}
+
+// «сырая» отправка на сервер — используется и обычными действиями,
+// и повтором из очереди. Различает два принципиально разных случая:
+// сеть не сработала (стоит поставить в очередь и повторить) и сервер
+// осмысленно ответил ошибкой (повторять бессмысленно — сломается точно
+// так же ещё раз, нужно показать причину сразу).
+async function sendRaw(payload){
+  const res = await fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if(data.error){
+    const err = new Error(data.error);
+    err.isServerError = true;
+    throw err;
+  }
+  return data;
+}
+
+let flushingQueue = false;
+async function flushQueue(){
+  if(flushingQueue) return;
+  if(!API_URL) return;
+  const arr = getQueue();
+  if(arr.length === 0) return;
+  flushingQueue = true;
+  try{
+    let remaining = arr.slice();
+    let sentAny = false;
+    let droppedErrors = [];
+    while(remaining.length > 0){
+      const item = remaining[0];
+      try{
+        await sendRaw(item.payload);
+        remaining.shift();
+        saveQueue(remaining);
+        sentAny = true;
+      }catch(e){
+        if(e && e.isServerError){
+          // сервер осмысленно отказал — повторять бессмысленно, убираем
+          // из очереди и сообщаем, не блокируя остальные отложенные действия
+          droppedErrors.push(e.message);
+          remaining.shift();
+          saveQueue(remaining);
+          continue;
+        }
+        break; // похоже, связи всё ещё нет — оставляем остаток на потом
+      }
+    }
+    if(droppedErrors.length){
+      showToast('Не удалось выполнить ' + droppedErrors.length + ' отложенных действий: ' + droppedErrors[0]);
+    }
+    if(sentAny){
+      showToast('Отложенные действия отправлены');
+      loadShow();
+    }
+  } finally {
+    flushingQueue = false;
+  }
+}
+window.addEventListener('online', flushQueue);
+
+// короткая вибрация-подтверждение — на входе шумно, часто отмечают
+// «пришёл» на ощупь, не глядя на экран
+function hapticTick(){
+  try{ if(navigator.vibrate) navigator.vibrate(35); }catch(e){ /* недоступно — не критично */ }
 }
 
 function saveUrl(){
@@ -538,12 +664,29 @@ function buildReferrers(){
   dl.innerHTML = REFERRERS.map(r=>`<option value="${r}">`).join('');
 }
 
-function showToast(msg){
+// opts: {actionLabel, onAction, duration}. Без opts — обычный текстовый тост, как раньше.
+function showToast(msg, opts){
+  opts = opts || {};
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  const actionBtn = document.getElementById('toast-action');
+  document.getElementById('toast-msg').textContent = msg;
   clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(()=>{ t.classList.remove('show'); }, 3200);
+
+  if(opts.onAction){
+    actionBtn.textContent = opts.actionLabel || 'Отменить';
+    actionBtn.style.display = 'inline-block';
+    actionBtn.onclick = function(){
+      clearTimeout(showToast._timer);
+      t.classList.remove('show');
+      opts.onAction();
+    };
+  }else{
+    actionBtn.style.display = 'none';
+    actionBtn.onclick = null;
+  }
+
+  t.classList.add('show');
+  showToast._timer = setTimeout(()=>{ t.classList.remove('show'); }, opts.duration || 3200);
 }
 
 let lastUpdatedAt = null;
@@ -632,12 +775,15 @@ function renderList(){
     const metaParts = [];
     if(g.zone) metaParts.push(g.zone + (g.seatInfo ? ', ' + g.seatInfo : ''));
     if(g.from) metaParts.push('от ' + g.from);
+    const pendingNote = g._pending ? ' · <b>⏳ отправляется…</b>' : '';
+    const checkOnclick = g._pending ? '' : `onclick="toggleArrived(${JSON.stringify(g.row)}, ${!g.arrived})"`;
+    const bodyOnclick = g._pending ? '' : `onclick="openEdit(${JSON.stringify(g.row)})"`;
     return `
-    <div class="guest ${g.arrived?'arrived':''}" data-row="${g.row}">
-      <button class="g-check ${g.arrived?'on':''}" onclick="toggleArrived(${g.row}, ${!g.arrived})">✓</button>
-      <div class="g-body" onclick="openEdit(${g.row})">
+    <div class="guest ${g.arrived?'arrived':''}" data-row="${escapeHtml(String(g.row))}">
+      <button class="g-check ${g.arrived?'on':''}" ${checkOnclick} ${g._pending?'disabled':''}>✓</button>
+      <div class="g-body" ${bodyOnclick}>
         <div class="g-name">${escapeHtml(g.name)}</div>
-        <div class="g-meta">${escapeHtml(metaParts.join(' · ') || '—')}${g.note ? ' · <b>'+escapeHtml(g.note)+'</b>':''}</div>
+        <div class="g-meta">${escapeHtml(metaParts.join(' · ') || '—')}${g.note ? ' · <b>'+escapeHtml(g.note)+'</b>':''}${pendingNote}</div>
       </div>
       <div class="g-seats">${g.seats}<small>мест</small></div>
     </div>`;
@@ -647,17 +793,22 @@ function renderList(){
 async function toggleArrived(row, value){
   const g = currentGuests.find(x=>x.row===row);
   if(g){ g.arrived = value; renderList(); updateStats(computeCounts()); buildSchema(); }
+  if(value) hapticTick();
+  const payload = {action:'checkin', show: currentShow, row, value};
   try{
-    const res = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action:'checkin', show: currentShow, row, value})
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error);
+    await sendRaw(payload);
+    showToast(
+      (value ? 'Отмечен пришедшим: ' : 'Снята отметка «пришёл»: ') + (g ? g.name : ''),
+      { actionLabel:'Отменить', duration:4000, onAction: function(){ toggleArrived(row, !value); } }
+    );
   }catch(e){
-    if(g){ g.arrived = !value; renderList(); updateStats(computeCounts()); buildSchema(); }
-    showToast('Не сохранилось — проверьте связь и отметьте ещё раз');
+    if(e && e.isServerError){
+      if(g){ g.arrived = !value; renderList(); updateStats(computeCounts()); buildSchema(); }
+      showToast('Ошибка: ' + e.message);
+    }else{
+      queueAction(payload);
+      showToast('Нет связи — отправим отметку автоматически, как только сеть появится');
+    }
   }
 }
 
@@ -671,15 +822,32 @@ function computeCounts(){
 }
 
 var editingRow = null;
+var groupMode = false;
+
+function setAddMode(isGroup){
+  groupMode = isGroup;
+  document.getElementById('am-single').classList.toggle('active', !isGroup);
+  document.getElementById('am-group').classList.toggle('active', isGroup);
+  document.getElementById('name-single-wrap').style.display = isGroup ? 'none' : 'block';
+  document.getElementById('name-group-wrap').style.display = isGroup ? 'block' : 'none';
+  document.getElementById('seats-field-wrap').style.display = isGroup ? 'none' : 'block';
+  document.getElementById('add-submit-btn').textContent = isGroup ? 'Добавить группу' : 'Добавить в список';
+  document.getElementById('add-submit-btn').classList.remove('btn-warn-confirm');
+  document.getElementById('add-msg').textContent = '';
+  seatConflictAcknowledged = false;
+  onConflictFieldsChange();
+}
 
 function openAdd(prefill){
   prefill = prefill || {};
   editingRow = null;
+  document.getElementById('add-mode-toggle').style.display = 'flex';
+  setAddMode(false);
   document.getElementById('add-title').textContent = 'Новый гость';
-  document.getElementById('add-submit-btn').textContent = 'Добавить в список';
   document.getElementById('delete-btn').style.display = 'none';
   document.getElementById('f-arrived-label').textContent = 'Гость уже у входа — сразу отметить «пришёл»';
   document.getElementById('f-name').value='';
+  document.getElementById('f-names-group').value='';
   document.getElementById('f-seats').value=1;
   document.getElementById('f-from').value='';
   document.getElementById('f-zone').value = prefill.zone || '-';
@@ -687,6 +855,8 @@ function openAdd(prefill){
   document.getElementById('f-note').value='';
   document.getElementById('f-arrived').checked = true;
   document.getElementById('add-msg').textContent='';
+  seatConflictAcknowledged = false;
+  document.getElementById('seat-conflict-msg').style.display = 'none';
   document.getElementById('add-overlay').classList.add('show');
   if(prefill.zone) document.getElementById('f-name').focus();
 }
@@ -696,8 +866,14 @@ function openEdit(row){
   const g = currentGuests.find(x=>x.row===row);
   if(!g) return;
   editingRow = row;
+  document.getElementById('add-mode-toggle').style.display = 'none'; // групповой режим только для новых гостей
+  groupMode = false;
+  document.getElementById('name-single-wrap').style.display = 'block';
+  document.getElementById('name-group-wrap').style.display = 'none';
+  document.getElementById('seats-field-wrap').style.display = 'block';
   document.getElementById('add-title').textContent = 'Изменить гостя';
   document.getElementById('add-submit-btn').textContent = 'Сохранить изменения';
+  document.getElementById('add-submit-btn').classList.remove('btn-warn-confirm');
   document.getElementById('delete-btn').style.display = 'block';
   document.getElementById('f-arrived-label').textContent = 'Гость пришёл';
   document.getElementById('f-name').value = g.name;
@@ -708,6 +884,8 @@ function openEdit(row){
   document.getElementById('f-note').value = g.note || '';
   document.getElementById('f-arrived').checked = !!g.arrived;
   document.getElementById('add-msg').textContent='';
+  seatConflictAcknowledged = false;
+  document.getElementById('seat-conflict-msg').style.display = 'none';
   document.getElementById('add-overlay').classList.add('show');
 }
 
@@ -721,8 +899,35 @@ function editFromPopover(){
 function closeAdd(){ document.getElementById('add-overlay').classList.remove('show'); editingRow = null; }
 
 async function submitAdd(){
+  if(groupMode) return submitGroupAdd();
+
   const name = document.getElementById('f-name').value.trim();
   if(!name){ document.getElementById('add-msg').textContent = 'Впишите фамилию и имя.'; return; }
+
+  if(!seatConflictAcknowledged){
+    const conflict = getSeatConflict(editingRow);
+    if(conflict){
+      const btn = document.getElementById('add-submit-btn');
+      btn.textContent = 'Всё равно добавить?';
+      btn.classList.add('btn-warn-confirm');
+      document.getElementById('add-msg').textContent = conflict.kind === 'guest'
+        ? 'Место ' + conflict.seat + ' уже занято: ' + conflict.name + '. Нажмите ещё раз, если это осознанно.'
+        : 'Место ' + conflict.seat + ' уже продано по билету. Нажмите ещё раз, если это осознанно.';
+      seatConflictAcknowledged = true; // следующий тап пройдёт; сбросится при любом изменении полей
+      return;
+    }
+    const nameDup = findNameDuplicate(name, editingRow);
+    if(nameDup){
+      const btn = document.getElementById('add-submit-btn');
+      btn.textContent = 'Всё равно добавить?';
+      btn.classList.add('btn-warn-confirm');
+      document.getElementById('add-msg').textContent = 'Такой гость уже есть в списке'
+        + (nameDup.arrived ? ' (отмечен как пришедший)' : '') + '. Нажмите ещё раз, если это осознанно.';
+      seatConflictAcknowledged = true;
+      return;
+    }
+  }
+
   const isEdit = editingRow != null;
   const payload = {
     action: isEdit ? 'edit' : 'add',
@@ -736,24 +941,236 @@ async function submitAdd(){
     arrived: document.getElementById('f-arrived').checked
   };
   if(isEdit) payload.row = editingRow;
+
   document.getElementById('add-msg').textContent = isEdit ? 'Сохраняю…' : 'Добавляю…';
   try{
-    const res = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if(data.error){ document.getElementById('add-msg').textContent = 'Ошибка: ' + data.error; return; }
+    await sendRaw(payload);
     closeAdd();
     loadShow();
   }catch(e){
-    var detail = e && e.message ? e.message : String(e);
-    document.getElementById('add-msg').textContent = 'Не удалось сохранить. Проверьте связь и попробуйте снова. Техническая причина: ' + detail;
+    if(e && e.isServerError){
+      document.getElementById('add-msg').textContent = 'Ошибка: ' + e.message;
+      return;
+    }
+    // нет связи — не держим человека у формы: откладываем на автоповтор
+    // и отражаем результат локально сразу же
+    queueAction(payload);
+    if(!isEdit){
+      currentGuests.push(Object.assign({row:'pending-'+Date.now(), _pending:true}, payload));
+      renderList(); updateStats(computeCounts()); buildSchema();
+    }
+    closeAdd();
+    showToast('Нет связи — гость сохранён локально, отправим автоматически');
   }
 }
 
+// Групповое добавление: одно имя на строку, зона/от кого/примечание/явка — общие на всех.
+// Место можно оставить пустым (тогда всем — без рассадки) или указать диапазоном
+// («2 ряд 3-5 место»), тогда места достаются именам по порядку сверху вниз;
+// количество мест в диапазоне должно совпадать с количеством имён.
+function parseGroupNames(){
+  return document.getElementById('f-names-group').value
+    .split('\n')
+    .map(function(s){ return s.trim(); })
+    .filter(function(s){ return s.length > 0; });
+}
+
+async function submitGroupAdd(){
+  const names = parseGroupNames();
+  const msgEl = document.getElementById('add-msg');
+  if(names.length === 0){ msgEl.textContent = 'Впишите хотя бы одно имя — по одному на строку.'; return; }
+
+  const zone = document.getElementById('f-zone').value;
+  const from = document.getElementById('f-from').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+  const arrived = document.getElementById('f-arrived').checked;
+  const seatInfoRaw = document.getElementById('f-seatinfo').value.trim();
+
+  // per-guest seatInfo: либо пусто всем, либо разложить диапазон по одному месту на имя
+  var seatInfoPerName = names.map(function(){ return ''; });
+  if(seatInfoRaw){
+    const parsed = parseSeatInfo(seatInfoRaw);
+    if(!parsed){
+      msgEl.textContent = 'Не разобрал «Ряд / место» — формат «2 ряд 3-5 место» или оставьте поле пустым.';
+      return;
+    }
+    if(parsed.seats.length !== names.length){
+      msgEl.textContent = 'Мест в диапазоне (' + parsed.seats.length + ') не совпадает с числом имён (' + names.length + ').';
+      return;
+    }
+    seatInfoPerName = parsed.seats.map(function(seat){ return parsed.row + ' ряд ' + seat + ' место'; });
+
+    if(!seatConflictAcknowledged){
+      const conflict = getGroupSeatConflict(zone, parsed.row, parsed.seats);
+      if(conflict){
+        const btn = document.getElementById('add-submit-btn');
+        btn.textContent = 'Всё равно добавить?';
+        btn.classList.add('btn-warn-confirm');
+        msgEl.textContent = (conflict.kind === 'guest'
+          ? 'Место ' + conflict.seat + ' уже занято: ' + conflict.name
+          : 'Место ' + conflict.seat + ' уже продано по билету')
+          + ' (имя №' + (conflict.index+1) + ' — «' + names[conflict.index] + '»). Нажмите ещё раз, если это осознанно.';
+        seatConflictAcknowledged = true;
+        return;
+      }
+    }
+  }
+
+  if(!seatConflictAcknowledged){
+    const nameConflict = getGroupNameConflict(names);
+    if(nameConflict){
+      const btn = document.getElementById('add-submit-btn');
+      btn.textContent = 'Всё равно добавить?';
+      btn.classList.add('btn-warn-confirm');
+      msgEl.textContent = nameConflict.kind === 'batch'
+        ? 'Имя «' + nameConflict.name + '» (№' + (nameConflict.index+1) + ') повторяется в списке дважды. Нажмите ещё раз, если это осознанно.'
+        : 'Гость «' + nameConflict.name + '» (№' + (nameConflict.index+1) + ') уже есть в списке. Нажмите ещё раз, если это осознанно.';
+      seatConflictAcknowledged = true;
+      return;
+    }
+  }
+
+  const payloads = names.map(function(name, i){
+    return {
+      action: 'add', show: currentShow, name, seats: 1, from, zone,
+      seatInfo: seatInfoPerName[i], note, arrived
+    };
+  });
+
+  msgEl.textContent = 'Добавляю 1 из ' + payloads.length + '…';
+  let sent = 0, offline = 0;
+  for(let i=0;i<payloads.length;i++){
+    msgEl.textContent = 'Добавляю ' + (i+1) + ' из ' + payloads.length + '…';
+    try{
+      await sendRaw(payloads[i]);
+      sent++;
+    }catch(e){
+      if(e && e.isServerError){
+        // сервер осмысленно отказал — не имеет смысла ставить в очередь,
+        // остальных из группы тоже не шлём молча вслепую, сообщаем что успело уйти
+        msgEl.textContent = 'Добавлено ' + sent + ' из ' + payloads.length + ', затем ошибка: ' + e.message;
+        if(sent > 0) loadShow();
+        return;
+      }
+      // нет связи — досылаем остаток офлайн-очередью, не теряя людей
+      queueAction(payloads[i]);
+      currentGuests.push(Object.assign({row:'pending-'+Date.now()+'-'+i, _pending:true}, payloads[i]));
+      offline++;
+    }
+  }
+  renderList(); updateStats(computeCounts()); buildSchema();
+  closeAdd();
+  showToast(offline > 0
+    ? 'Добавлено ' + payloads.length + ': ' + (payloads.length-offline) + ' сразу, ' + offline + ' сохранено локально (отправим автоматически)'
+    : 'Добавлено гостей: ' + payloads.length);
+  if(offline === 0) loadShow();
+}
+
+var SEAT_BASED_ZONES = ['амфитеатр','Сектор A','Сектор B','Сектор C','Сектор D'];
+var seatConflictAcknowledged = false; // сброшенный флаг требует нового подтверждения при любом изменении полей
+
+function conflictForSeat(zone, row, seat, excludeRow){
+  var g = findSeatGuest(zone, row, seat, excludeRow);
+  if(g) return {kind:'guest', name:g.name, seat:seat};
+  var s = findSoldEntry(zone, row, seat);
+  if(s) return {kind:'sold', seat:seat};
+  return null;
+}
+
+// Нормализация для сравнения имён: пробелы по краям и повторы пробелов не
+// должны считаться разными гостями, регистр — тоже.
+function normName(s){ return String(s||'').trim().toLowerCase().replace(/\s+/g,' '); }
+
+// Ищет в текущем списке (этот показ) гостя с таким же Фамилия+Имя.
+// excludeRow — чтобы при редактировании гость не конфликтовал сам с собой.
+function findNameDuplicate(name, excludeRow){
+  var norm = normName(name);
+  if(!norm) return null;
+  return currentGuests.find(function(g){
+    if(excludeRow != null && g.row === excludeRow) return false;
+    return normName(g.name) === norm;
+  }) || null;
+}
+
+// То же самое для групповой формы: проверяет и совпадение с уже существующими
+// гостями, и повтор имени внутри самого вводимого списка (частая опечатка —
+// вставили список дважды).
+function getGroupNameConflict(names){
+  var seen = {};
+  for(var i=0;i<names.length;i++){
+    var norm = normName(names[i]);
+    if(!norm) continue;
+    if(seen.hasOwnProperty(norm)){
+      return {kind:'batch', index:i, name:names[i]};
+    }
+    seen[norm] = i;
+    var existing = findNameDuplicate(names[i], null);
+    if(existing) return {kind:'existing', index:i, name:names[i], existingName:existing.name};
+  }
+  return null;
+}
+
+// Ищет конфликт для текущих значений полей формы (режим «один гость»).
+// excludeRow — чтобы при редактировании гость не конфликтовал сам с собой.
+function getSeatConflict(excludeRow){
+  var zone = document.getElementById('f-zone').value;
+  var seatInfo = document.getElementById('f-seatinfo').value.trim();
+  if(SEAT_BASED_ZONES.indexOf(zone) === -1) return null;
+  var parsed = parseSeatInfo(seatInfo);
+  if(!parsed) return null;
+  for(var i=0;i<parsed.seats.length;i++){
+    var c = conflictForSeat(zone, parsed.row, parsed.seats[i], excludeRow);
+    if(c) return c;
+  }
+  return null;
+}
+
+// То же самое, но по явному списку (зона, ряд, места[]) — для групповой формы,
+// где места вычисляются из диапазона. Возвращает первый найденный конфликт
+// вместе с указанием, какому по счёту имени он соответствует.
+function getGroupSeatConflict(zone, row, seats){
+  if(SEAT_BASED_ZONES.indexOf(zone) === -1) return null;
+  for(var i=0;i<seats.length;i++){
+    var c = conflictForSeat(zone, row, seats[i], null);
+    if(c){ c.index = i; return c; }
+  }
+  return null;
+}
+
+function onConflictFieldsChange(){
+  seatConflictAcknowledged = false;
+  resetSubmitButton();
+  var msg = document.getElementById('seat-conflict-msg');
+  var zone = document.getElementById('f-zone').value;
+  document.getElementById('group-seat-hint').style.display =
+    (groupMode && SEAT_BASED_ZONES.indexOf(zone) !== -1) ? 'block' : 'none';
+
+  if(groupMode){ msg.style.display = 'none'; msg.textContent=''; return; } // групповая форма проверяется при отправке
+  var conflict = getSeatConflict(editingRow);
+  if(conflict){
+    msg.style.display = 'block';
+    msg.textContent = conflict.kind === 'guest'
+      ? 'Место ' + conflict.seat + ' уже занято: ' + conflict.name
+      : 'Место ' + conflict.seat + ' уже продано по билету';
+    return;
+  }
+  var nameDup = findNameDuplicate(document.getElementById('f-name').value, editingRow);
+  if(nameDup){
+    msg.style.display = 'block';
+    msg.textContent = 'Такой гость уже есть в списке' + (nameDup.arrived ? ' (отмечен как пришедший)' : '');
+    return;
+  }
+  msg.style.display = 'none'; msg.textContent='';
+}
+
+function resetSubmitButton(){
+  var btn = document.getElementById('add-submit-btn');
+  btn.textContent = editingRow != null ? 'Сохранить изменения' : 'Добавить в список';
+  btn.classList.remove('btn-warn-confirm');
+}
+
 function escapeHtml(s){
+
   return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
@@ -779,18 +1196,19 @@ async function submitMarkSold(){
   };
   document.getElementById('sold-msg').textContent = 'Сохраняю…';
   try{
-    const res = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if(data.error){ document.getElementById('sold-msg').textContent = 'Ошибка: ' + data.error; return; }
+    await sendRaw(payload);
     closeMarkSold();
     loadShow();
   }catch(e){
-    var detail = e && e.message ? e.message : String(e);
-    document.getElementById('sold-msg').textContent = 'Не удалось сохранить. Проверьте связь. Техническая причина: ' + detail;
+    if(e && e.isServerError){
+      document.getElementById('sold-msg').textContent = 'Ошибка: ' + e.message;
+      return;
+    }
+    queueAction(payload);
+    currentSold.push(Object.assign({row:'pending-'+Date.now(), _pending:true}, payload));
+    buildSchema();
+    closeMarkSold();
+    showToast('Нет связи — отметка сохранена локально, отправим автоматически');
   }
 }
 
@@ -816,51 +1234,83 @@ async function removeSold(){
   const removed = idx !== -1 ? currentSold[idx] : null;
   if(idx !== -1){ currentSold.splice(idx,1); buildSchema(); }
 
+  const payload = {action:'deleteSold', row: row};
   try{
-    const res = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action:'deleteSold', row: row})
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error);
+    await sendRaw(payload);
     showToast('Бронь снята');
   }catch(e){
-    if(removed){ currentSold.push(removed); buildSchema(); }
-    showToast('Не удалось снять бронь — проверьте связь и попробуйте снова');
+    if(e && e.isServerError){
+      if(removed){ currentSold.push(removed); buildSchema(); }
+      showToast('Ошибка: ' + e.message);
+    }else{
+      queueAction(payload);
+      showToast('Нет связи — снятие брони отправим автоматически');
+    }
   }
 }
 
 // Общая функция удаления — вызывается и из формы редактирования, и из
-// попапа на схеме зала. Спрашивает подтверждение (действие необратимо —
-// строка очищается на сервере сразу), убирает гостя из локального списка
-// без ожидания ответа сервера (чтобы список не «подвисал»), откатывает
-// назад при ошибке сети.
+// попапа на схеме зала. Спрашивает подтверждение, убирает гостя из
+// локального списка без ожидания ответа сервера (чтобы список не
+// «подвисал»), откатывает назад при ошибке сети. Тост после удаления даёт
+// несколько секунд на отмену (тем же паттерном, что и «пришёл»).
 async function performDelete(row){
   const g = currentGuests.find(x=>x.row===row);
   if(!g) return;
-  if(!confirm('Удалить «' + g.name + '» из списка? Это освободит место — отменить нельзя, придётся вносить заново.')) return;
+  if(!confirm('Удалить «' + g.name + '» из списка? Место освободится.')) return;
 
   currentGuests = currentGuests.filter(x=>x.row!==row);
   renderList();
   updateStats(computeCounts());
   buildSchema();
 
+  const payload = {action:'delete', show: currentShow, row};
   try{
-    const res = await fetch(API_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action:'delete', show: currentShow, row})
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error);
-    showToast('Гость удалён');
+    await sendRaw(payload);
+    showToast(
+      'Гость удалён: ' + g.name,
+      { actionLabel:'Отменить', duration:4000, onAction: function(){ restoreDeletedGuest(g); } }
+    );
   }catch(e){
-    currentGuests.push(g);
-    renderList();
-    updateStats(computeCounts());
-    buildSchema();
-    showToast('Не удалось удалить — проверьте связь и попробуйте снова');
+    if(e && e.isServerError){
+      currentGuests.push(g);
+      renderList();
+      updateStats(computeCounts());
+      buildSchema();
+      showToast('Ошибка: ' + e.message);
+    }else{
+      const queueId = queueAction(payload);
+      showToast(
+        'Нет связи — удаление отправим автоматически',
+        { actionLabel:'Отменить', duration:4000, onAction: function(){ unqueueAction(queueId); restoreDeletedGuest(g); } }
+      );
+    }
+  }
+}
+
+// Отмена удаления: добавляет гостя обратно с теми же данными, что были у
+// удалённой записи. Строка в таблице почти наверняка будет другая (сервер
+// сам находит первую свободную) — это нормально, гостя это не портит.
+async function restoreDeletedGuest(g){
+  const payload = {
+    action: 'add', show: currentShow,
+    name: g.name, seats: g.seats || 1, from: g.from || '', zone: g.zone || '-',
+    seatInfo: g.seatInfo || '', note: g.note || '', arrived: !!g.arrived
+  };
+  showToast('Восстанавливаю…');
+  try{
+    await sendRaw(payload);
+    loadShow();
+    showToast('Гость восстановлен: ' + g.name);
+  }catch(e){
+    if(e && e.isServerError){
+      showToast('Не удалось восстановить: ' + e.message);
+    }else{
+      queueAction(payload);
+      currentGuests.push(Object.assign({row:'pending-'+Date.now(), _pending:true}, payload));
+      renderList(); updateStats(computeCounts()); buildSchema();
+      showToast('Нет связи — восстановление сохранено локально, отправим автоматически');
+    }
   }
 }
 
@@ -889,13 +1339,25 @@ function setView(v){
   closeSoldPopover();
 }
 
-// "3 ряд 2 место" / "3 ряд 2,3 место" → {row:3, seats:[2,3]}. Свободный текст, не всегда парсится.
+// "3 ряд 2 место" / "3 ряд 2,3 место" / "3 ряд 2-4 место" → {row:3, seats:[...]}.
+// Свободный текст, не всегда парсится.
 function parseSeatInfo(text){
   if(!text) return null;
-  var m = String(text).match(/(\d+)\s*ряд\D*?([\d]+(?:\s*,\s*\d+)*)\s*мест/i);
+  var m = String(text).match(/(\d+)\s*ряд\D*?([\d,\s\-]+)\s*мест/i);
   if(!m) return null;
   var row = parseInt(m[1],10);
-  var seats = m[2].split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(n){return !isNaN(n);});
+  var seats = [];
+  m[2].split(',').forEach(function(part){
+    part = part.trim();
+    var range = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if(range){
+      var a = parseInt(range[1],10), b = parseInt(range[2],10);
+      if(!isNaN(a) && !isNaN(b) && a<=b){ for(var i=a;i<=b;i++) seats.push(i); }
+    }else{
+      var n = parseInt(part,10);
+      if(!isNaN(n)) seats.push(n);
+    }
+  });
   if(!row || seats.length===0) return null;
   return {row: row, seats: seats};
 }
@@ -914,10 +1376,11 @@ function guestsInZone(zone){
 }
 
 // находит гостя, занимающего конкретное место в зоне
-function findSeatGuest(zone, row, seat){
+function findSeatGuest(zone, row, seat, excludeRow){
   for(var i=0;i<currentGuests.length;i++){
     var g = currentGuests[i];
     if(g.zone !== zone) continue;
+    if(excludeRow != null && g.row === excludeRow) continue;
     var p = parseSeatInfo(g.seatInfo);
     if(p && p.row===row && p.seats.indexOf(seat)!==-1) return g;
   }
