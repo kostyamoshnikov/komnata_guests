@@ -30,6 +30,10 @@
     <div class="wordmark">КОМНАТА СВЕТА<small>БуФест 2026 · Вход</small></div>
     <button class="gear" onclick="openSettings()">⚙</button>
   </div>
+  <div class="view-toggle" id="mode-toggle" style="max-width:684px;margin:0 auto 10px;padding:0 18px;box-sizing:content-box">
+    <button id="mode-shows" class="active" onclick="setMode('shows')">Спектакли</button>
+    <button id="mode-special" onclick="setMode('special')">Спецпрограмма</button>
+  </div>
   <div class="tabs-wrap">
     <button class="tabs-arrow left" onclick="scrollTabs(-1)" aria-label="Показы левее">‹</button>
     <div class="tabs" id="tabs"></div>
@@ -90,7 +94,7 @@
       <div style="font-size:11px;color:var(--steel);margin-top:6px">Зона, «от кого», примечание и явка — одни на всех. Место ниже можно оставить пустым или указать диапазоном (см. подсказку под полем).</div>
     </div>
     <div class="field-row">
-      <div class="field" id="seats-field-wrap">
+      <div class="field field-narrow" id="seats-field-wrap">
         <label>Мест</label>
         <input id="f-seats" type="number" min="1" value="1">
       </div>
@@ -100,7 +104,7 @@
         <datalist id="from-list"></datalist>
       </div>
     </div>
-    <div class="field-row">
+    <div class="field-row" id="zone-fields-row">
       <div class="field">
         <label>Зона</label>
         <select id="f-zone" onchange="onConflictFieldsChange()"></select>
@@ -214,6 +218,13 @@ const REFERRERS = ['Светлана Кряжева','Константин Мо�
 const DEFAULT_API_URL = '';
 
 let API_URL = null;
+const SPECIAL_EVENTS = [
+  {tab:'11.08 Променад',              title:'Променад с Дарьей Павленко',  d:'11.08', dow:'12:00'},
+  {tab:'13.08 Разговор с Ван Шенем',  title:'Разговор с Ван Шенем',        d:'13.08', dow:'12:00'},
+  {tab:'13.08 Хроники моей любви',    title:'Хроники моей любви',          d:'13.08', dow:'14:00'},
+  {tab:'15.08 Чайка (кинопоказ)',     title:'Чайка (кинопоказ)',           d:'15.08', dow:'12:00'},
+];
+let currentMode = 'shows'; // 'shows' | 'special' — переключатель «Спектакли/Спецпрограмма»
 let currentShow = SHOWS[0].tab;
 let currentGuests = [];
 let currentSold = [];
@@ -409,7 +420,8 @@ function scrollTabs(dir){
 function buildTabs(){
   const wrap = document.getElementById('tabs');
   wrap.innerHTML = '';
-  SHOWS.forEach(s=>{
+  const list = currentMode === 'special' ? SPECIAL_EVENTS : SHOWS;
+  list.forEach(s=>{
     const b = document.createElement('button');
     b.className = 'tab' + (s.tab===currentShow ? ' active':'');
     b.innerHTML = `<span class="d">${s.d}</span><span class="t">${s.title}</span>`;
@@ -424,6 +436,33 @@ function buildTabs(){
     };
     wrap.appendChild(b);
   });
+}
+
+// Переключает «Спектакли» / «Спецпрограмма» — разные списки мероприятий,
+// разный набор доступных экранов (у спецпрограммы нет схемы зала и
+// «Отметить продано» — только список ожидания на входной билет).
+function setMode(mode){
+  currentMode = mode;
+  document.getElementById('mode-shows').classList.toggle('active', mode==='shows');
+  document.getElementById('mode-special').classList.toggle('active', mode==='special');
+
+  const isSpecial = mode === 'special';
+  document.getElementById('vt-schema').style.display = isSpecial ? 'none' : '';
+  document.querySelector('.fab-secondary').style.display = isSpecial ? 'none' : '';
+  if (isSpecial) setView('list');
+
+  const list = isSpecial ? SPECIAL_EVENTS : SHOWS;
+  currentShow = list[0].tab;
+  currentGuests = [];
+  currentSold = [];
+  lastUpdatedAt = null;
+  updateLastUpdatedLabel();
+  buildTabs();
+  loadShow();
+}
+
+function isSpecialEvent(tab){
+  return SPECIAL_EVENTS.some(e => e.tab === tab);
 }
 function buildZones(){
   const opts = ZONES.map(z=>`<option value="${z}">${z}</option>`).join('');
@@ -628,6 +667,7 @@ function openAdd(prefill){
   document.getElementById('add-msg').textContent='';
   seatConflictAcknowledged = false;
   document.getElementById('seat-conflict-msg').style.display = 'none';
+  document.getElementById('zone-fields-row').style.display = isSpecialEvent(currentShow) ? 'none' : 'flex';
   document.getElementById('add-overlay').classList.add('show');
   if(prefill.zone) document.getElementById('f-name').focus();
 }
@@ -657,6 +697,7 @@ function openEdit(row){
   document.getElementById('add-msg').textContent='';
   seatConflictAcknowledged = false;
   document.getElementById('seat-conflict-msg').style.display = 'none';
+  document.getElementById('zone-fields-row').style.display = isSpecialEvent(currentShow) ? 'none' : 'flex';
   document.getElementById('add-overlay').classList.add('show');
 }
 
