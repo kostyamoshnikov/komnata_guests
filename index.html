@@ -1296,8 +1296,9 @@ function seatCellHtml(zone, row, seat){
   return `<div class="seat" data-zone="${escapeHtml(zone)}" data-row="${row}" data-seat="${seat}" onclick="seatTap(this)" title="Свободно · нажмите, чтобы вписать гостя">${seat}</div>`;
 }
 
-function sectorHtml(zone, label, mirrored){
+function sectorHtml(zone, label, mirrored, showRowHeader){
   var colsHtml = '';
+  var headerCells = '';
   for(var i=1; i<=SECTOR_ROWS; i++){
     // Сектор A/Б: колонки слева направо — ряд 3,2,1 (ряд 3 ближе к сцене).
     // Сектор C/D: колонки слева направо — ряд 1,2,3 (зеркально).
@@ -1305,16 +1306,19 @@ function sectorHtml(zone, label, mirrored){
     var seatsHtml = '';
     for(var s=1; s<=SECTOR_SEATS; s++){ seatsHtml += seatCellHtml(zone, rowNum, s); }
     colsHtml += `<div class="seat-col">${seatsHtml}</div>`;
+    headerCells += `<span class="sector-rownum">${rowNum}</span>`;
   }
-  return `<div class="sector-col"><div class="sector-label">${label}</div><div class="sector-cols">${colsHtml}</div></div>`;
+  var header = showRowHeader ? `<div class="sector-rownum-row">${headerCells}</div>` : '';
+  return `<div class="sector-col"><div class="sector-label">${label}</div><div class="sector-cols">${colsHtml}</div>${header}</div>`;
 }
 
-function amphiBlockHtml(colStart, colEnd){
+function amphiBlockHtml(colStart, colEnd, numSide){
   var rowsHtml = '';
   for(var r=1;r<=AMPHI_ROWS;r++){
     var cells = '';
     for(var c=colStart;c<=colEnd;c++){ cells += seatCellHtml('амфитеатр', r, c); }
-    rowsHtml += `<div class="seat-row">${cells}</div>`;
+    var num = `<span class="row-num">${r}</span>`;
+    rowsHtml += `<div class="seat-row">${numSide==='left' ? num : ''}${cells}${numSide==='right' ? num : ''}</div>`;
   }
   return `<div class="amphi-block">${rowsHtml}</div>`;
 }
@@ -1336,9 +1340,9 @@ function buildSchema(){
   var html = `
   <div class="schema"><div class="schema-inner">
     <div class="sectors-row">
-      <div style="display:flex;flex-direction:column;gap:14px">${sectorHtml('Сектор A','Сектор A', true)}${sectorHtml('Сектор B','Сектор B', true)}</div>
+      <div style="display:flex;flex-direction:column;gap:14px">${sectorHtml('Сектор A','Сектор A', true)}${sectorHtml('Сектор B','Сектор B', true, true)}</div>
       <div class="stage-strip" style="align-self:center">Сцена</div>
-      <div style="display:flex;flex-direction:column;gap:14px">${sectorHtml('Сектор C','Сектор C', false)}${sectorHtml('Сектор D','Сектор D', false)}</div>
+      <div style="display:flex;flex-direction:column;gap:14px">${sectorHtml('Сектор C','Сектор C', false)}${sectorHtml('Сектор D','Сектор D', false, true)}</div>
     </div>
     <div class="amphi-label">Амфитеатр</div>
     <div class="amphi-wrap">
@@ -1347,9 +1351,9 @@ function buildSchema(){
         <div class="entrance-btn" onclick="openAdd({zone:'входной'})" title="Входной, без рассадки · нажмите, чтобы вписать гостя">Входной</div>
         <div class="entrance-label" title="Вход / выход">Вход / выход</div>
       </div>
-      ${amphiBlockHtml(1,6)}
+      ${amphiBlockHtml(1,6,'right')}
       <div class="lesenka-col" onclick="openAdd({zone:'лесенка'})" title="Лесенка · нажмите, чтобы вписать гостя"><span>Лесенка</span></div>
-      ${amphiBlockHtml(7,12)}
+      ${amphiBlockHtml(7,12,'left')}
       <div class="amphi-side">
         <div class="extra-col" onclick="openAdd({zone:'приставные стулья правая сторона'})" title="Приставные стулья, правая сторона · нажмите, чтобы вписать гостя"><span>Приставные<br>правая сторона</span></div>
         <div class="entrance-btn" onclick="openAdd({zone:'входной'})" title="Входной, без рассадки · нажмите, чтобы вписать гостя">Входной</div>
